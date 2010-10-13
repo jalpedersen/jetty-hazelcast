@@ -20,14 +20,29 @@ import org.eclipse.jetty.server.UserIdentity;
  */
 public class SerializableIdentityService implements IdentityService {
     
-    public static class MontyIdentity implements UserIdentity, Serializable {
+    public static class SerializablePrincipal implements Principal, Serializable {
+        private static final long serialVersionUID = -2877462296027623856L;
+        private final String name;
+
+        public SerializablePrincipal(String name) {
+            super();
+            this.name = name;
+        }
+
+        @Override
+        public String getName() {
+            return name;
+        }
+    }
+    
+    public static class SerializableIdentity implements UserIdentity, Serializable {
         private static final long serialVersionUID = 493118349878757632L;
 
         private final Principal principal;
 	private final Subject subject;
 	private final String roles[];
 	                           
-	public MontyIdentity(Principal principal, Subject subject, String[] roles) {
+	public SerializableIdentity(Principal principal, Subject subject, String[] roles) {
 	    this.principal = principal;
 	    this.subject = subject;
 	    this.roles = roles;
@@ -85,7 +100,7 @@ public class SerializableIdentityService implements IdentityService {
 
     @Override
     public UserIdentity newUserIdentity(Subject subject, Principal userPrincipal, String[] roles) {
-	return new MontyIdentity(userPrincipal, subject, roles);
+	return new SerializableIdentity(userPrincipal, subject, roles);
     }
 
     @Override

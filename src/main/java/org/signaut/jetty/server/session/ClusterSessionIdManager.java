@@ -1,5 +1,9 @@
 package org.signaut.jetty.server.session;
 
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.InputStream;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.util.concurrent.ConcurrentMap;
@@ -12,6 +16,8 @@ import org.signaut.jetty.server.session.ClusterSessionManager.ClusterSession;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.hazelcast.config.XmlConfigBuilder;
+import com.hazelcast.core.Hazelcast;
 import com.hazelcast.core.HazelcastInstance;
 import com.hazelcast.core.MultiMap;
 
@@ -92,11 +98,25 @@ public class ClusterSessionIdManager extends AbstractSessionIdManager implements
 	return hazelcastInstance.getMap(SESSION_ATTRIBUTE_MAP);
     }
     
-    private HazelcastInstance loadHazelcastInstance(String file) {
+    private HazelcastInstance loadHazelcastInstance(String filename) {
 	//Load file from current location
-	
-	//If this fails, load from classpath
-	
+	final File file = new File("./"+filename);
+	final XmlConfigBuilder configBuilder;
+	if (file.exists()) {
+	    try {
+	        configBuilder = new XmlConfigBuilder(new FileInputStream(file));
+            } catch (FileNotFoundException e) {
+        	throw new IllegalArgumentException("Failed to load file " + filename, e);
+            }
+            return Hazelcast.newHazelcastInstance(configBuilder.build());
+	} else {
+	    //If this fails, load from classpath
+	    final InputStream resource = this.getClass().getResourceAsStream(filename);
+	    if (resource != null) {
+		configBuilder = new XmlConfigBuilder(resource);
+		return Hazelcast.newHazelcastInstance(configBuilder.build());
+	    }
+	}
 	//Bail out if all else fails
 	throw new IllegalStateException("Failed to load hazelcast configuration from " + file);
     }
