@@ -1,0 +1,78 @@
+<hazelcast>
+    <group>
+        <name>test-session</name>
+        <password>not-very-important</password>
+    </group>
+    <network>
+        <port auto-increment="true">5701</port>
+        <join>
+            <multicast enabled="false">
+                <multicast-group>224.2.2.3</multicast-group>
+                <multicast-port>54327</multicast-port>
+            </multicast>
+            <tcp-ip enabled="true">
+                <interface>127.0.0.1</interface>
+            </tcp-ip>
+        </join>
+        <interfaces enabled="false">
+            <interface>192.168.2.*</interface>
+			<interface>192.168.1.*</interface>
+			<interface>192.168.0.*</interface>
+        </interfaces>
+        <symmetric-encryption enabled="false">
+            <!--
+               encryption algorithm such as
+               DES/ECB/PKCS5Padding,
+               PBEWithMD5AndDES,
+               AES/CBC/PKCS5Padding,
+               Blowfish,
+               DESede
+            -->
+            <algorithm>PBEWithMD5AndDES</algorithm>
+            <!-- salt value to use when generating the secret key -->
+            <salt>thesalt</salt>
+            <!-- pass phrase to use when generating the secret key -->
+            <password>thepass</password>
+            <!-- iteration count to use when generating the secret key -->
+            <iteration-count>19</iteration-count>
+        </symmetric-encryption>
+        <asymmetric-encryption enabled="false">
+            <!-- encryption algorithm -->
+            <algorithm>RSA/NONE/PKCS1PADDING</algorithm>
+            <!-- private key password -->
+            <keyPassword>thekeypass</keyPassword>
+            <!-- private key alias -->
+            <keyAlias>local</keyAlias>
+            <!-- key store type -->
+            <storeType>JKS</storeType>
+            <!-- key store password -->
+            <storePassword>thestorepass</storePassword>
+            <!-- path to the key store -->
+            <storePath>keystore</storePath>
+        </asymmetric-encryption>
+    </network>
+    <executor-service>
+        <core-pool-size>16</core-pool-size>
+        <max-pool-size>64</max-pool-size>
+        <keep-alive-seconds>60</keep-alive-seconds>
+    </executor-service>
+    <multimap name="signaut.sessionIdMap">
+        <backup-count>1</backup-count>
+        <eviction-policy>NONE</eviction-policy>
+        <max-size>0</max-size>
+        <merge-policy>hz.ADD_NEW_ENTRY</merge-policy>
+    </multimap>
+    <map name="signaut.sessionMap">
+        <backup-count>1</backup-count>
+        <eviction-policy>NONE</eviction-policy>
+        <max-size>0</max-size>
+        <merge-policy>hz.ADD_NEW_ENTRY</merge-policy>
+    </map>
+	<map name="signaut.sessionAttrMap">
+        <backup-count>1</backup-count>
+        <eviction-policy>NONE</eviction-policy>
+        <max-size>0</max-size>
+        <merge-policy>hz.ADD_NEW_ENTRY</merge-policy>
+    </map>
+
+</hazelcast>
