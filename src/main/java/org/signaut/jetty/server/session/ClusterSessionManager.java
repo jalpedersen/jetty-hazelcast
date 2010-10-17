@@ -34,8 +34,7 @@ import com.hazelcast.core.HazelcastInstance;
  * @author jalp
  * 
  */
-public class ClusterSessionManager extends AbstractSessionManager implements
-        SessionManager, Runnable {
+public class ClusterSessionManager extends AbstractSessionManager implements SessionManager, Runnable {
 
     private final Logger logger = LoggerFactory.getLogger(getClass());
     private boolean invalidOnRedeploy;
@@ -251,8 +250,7 @@ public class ClusterSessionManager extends AbstractSessionManager implements
 
 	try {
 	    long now = System.currentTimeMillis();
-	    for (Entry<String, ClusterSessionData> entry : sessionMap
-		    .entrySet()) {
+	    for (Entry<String, ClusterSessionData> entry : sessionMap.entrySet()) {
 		final ClusterSessionData data = entry.getValue();
 		if (data.isKeepAlive()) {
 		    // Should we put the session into cryostasis?

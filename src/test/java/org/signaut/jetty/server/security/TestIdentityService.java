@@ -18,7 +18,7 @@ public class TestIdentityService {
     @Test
     public void testSerialization() throws IOException {
 	SerializableIdentityService service = new SerializableIdentityService();
-	UserIdentity identity = service.newUserIdentity(new Subject(), new SerializableIdentityService.SerializablePrincipal("testUser"), new String[]{"myRole"});
+	UserIdentity identity = service.newUserIdentity(new Subject(), new SerializablePrincipal("testUser"), new String[]{"myRole"});
 	ObjectOutputStream outputStream = new ObjectOutputStream(new ByteArrayOutputStream());
 	outputStream.writeObject(identity);
 	outputStream.close();

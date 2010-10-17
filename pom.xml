@@ -29,6 +29,12 @@
       <artifactId>hazelcast</artifactId>
       <version>1.9</version>
     </dependency>
+	<!-- Hazelcast depends on log4j-->
+    <dependency>
+      <groupId>log4j</groupId>
+      <artifactId>log4j</artifactId>
+      <version>1.2.16</version>
+    </dependency>
 	
 	<!-- Test dependencies -->
 	<dependency>
