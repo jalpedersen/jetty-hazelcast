@@ -15,51 +15,51 @@ class ClusterSessionData implements Serializable {
     private Set<String> keys = new HashSet<String>();
 
     public long getCreated() {
-	return created;
+        return created;
     }
 
     public void setCreated(long created) {
-	this.created = created;
-	this.accessed = created;
+        this.created = created;
+        this.accessed = created;
     }
 
     public boolean isIdChanged() {
-	return idChanged;
+        return idChanged;
     }
 
     public void setIdChanged(boolean idChanged) {
-	this.idChanged = idChanged;
+        this.idChanged = idChanged;
     }
 
     public long getMaxIdleMs() {
-	return maxIdleMs;
+        return maxIdleMs;
     }
 
     public void setMaxIdleMs(long maxIdleMs) {
-	this.maxIdleMs = maxIdleMs;
+        this.maxIdleMs = maxIdleMs;
     }
 
     public long getAccessed() {
-	return accessed;
+        return accessed;
     }
 
     public void setAccessed(long accessed) {
-	this.accessed = accessed;
+        this.accessed = accessed;
     }
 
     public Set<String> getKeys() {
-	return keys;
+        return keys;
     }
 
     public void setKeys(Set<String> keys) {
-	this.keys = keys;
+        this.keys = keys;
     }
 
     public void setKeepAlive(boolean keepAlive) {
-	this.keepAlive = keepAlive;
+        this.keepAlive = keepAlive;
     }
 
     public boolean isKeepAlive() {
-	return keepAlive;
+        return keepAlive;
     }
 }

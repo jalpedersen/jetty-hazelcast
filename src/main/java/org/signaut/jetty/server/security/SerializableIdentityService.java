@@ -10,49 +10,49 @@ import org.eclipse.jetty.security.RunAsToken;
 import org.eclipse.jetty.server.UserIdentity;
 
 /**
- * IdentityService implementation which produces a serializable UserIdentity object.
- * Other than the serializable property of the returned identity, this service is 
- * identical to the DefaultIdentityService.
+ * IdentityService implementation which produces a serializable UserIdentity
+ * object. Other than the serializable property of the returned identity, this
+ * service is identical to the DefaultIdentityService.
  * 
  * @author jalp
- *
+ * 
  */
 public class SerializableIdentityService implements IdentityService {
-    
+
     @Override
     public Object associate(UserIdentity user) {
-	//Ignore
-	return null;
+        // Ignore
+        return null;
     }
 
     @Override
     public void disassociate(Object previous) {
-	//Ignore
+        // Ignore
     }
 
     @Override
     public Object setRunAs(UserIdentity user, RunAsToken token) {
-	return token;
+        return token;
     }
 
     @Override
     public void unsetRunAs(Object token) {
-	//Ignore
+        // Ignore
     }
 
     @Override
     public UserIdentity newUserIdentity(Subject subject, Principal userPrincipal, String[] roles) {
-	return new SerializableIdentity(userPrincipal, subject, roles);
+        return new SerializableIdentity(userPrincipal, subject, roles);
     }
 
     @Override
     public RunAsToken newRunAsToken(String runAsName) {
-	return new RoleRunAsToken(runAsName);
+        return new RoleRunAsToken(runAsName);
     }
 
     @Override
     public UserIdentity getSystemUserIdentity() {
-	//Not implemented
-	return null;
+        // Not implemented
+        return null;
     }
 }

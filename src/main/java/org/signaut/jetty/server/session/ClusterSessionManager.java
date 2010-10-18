@@ -15,21 +15,18 @@ import java.util.concurrent.TimeUnit;
 
 import javax.servlet.http.HttpServletRequest;
 
-import org.eclipse.jetty.server.SessionIdManager;
 import org.eclipse.jetty.server.SessionManager;
 import org.eclipse.jetty.server.session.AbstractSessionManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.hazelcast.core.Hazelcast;
-import com.hazelcast.core.HazelcastInstance;
-
-
 /**
- * <p>Clusterable session manager using Hazelcast.</p>
+ * <p>
+ * Clusterable session manager using Hazelcast.
+ * </p>
  * 
  * Requires {@link ClusterSessionIdManager} Session ID manager
- *  
+ * 
  * 
  * @author jalp
  * 
@@ -38,7 +35,7 @@ public class ClusterSessionManager extends AbstractSessionManager implements Ses
 
     private final Logger logger = LoggerFactory.getLogger(getClass());
     private boolean invalidOnRedeploy;
-    
+
     private final ConcurrentMap<String, ClusterSessionData> sessionMap;
     private final ConcurrentMap<String, Object> attributeMap;
     private final long cleanupTaskDelay = 120;
@@ -47,224 +44,220 @@ public class ClusterSessionManager extends AbstractSessionManager implements Ses
     private String stickySessionKey = "_signaut.stickySession";
 
     public ClusterSessionManager(ClusterSessionIdManager sessionIdManager) {
-	super();
-	invalidOnRedeploy = false;
-	setIdManager(sessionIdManager);
-	this.sessionMap = sessionIdManager.getSessionMap();
-	this.attributeMap = sessionIdManager.getAttributeMap();
+        super();
+        invalidOnRedeploy = false;
+        setIdManager(sessionIdManager);
+        this.sessionMap = sessionIdManager.getSessionMap();
+        this.attributeMap = sessionIdManager.getAttributeMap();
     }
-    
+
     public boolean isInvalidOnRedeploy() {
         return invalidOnRedeploy;
     }
-
 
     public void setInvalidOnRedeploy(boolean invalidOnRedeploy) {
         this.invalidOnRedeploy = invalidOnRedeploy;
     }
 
-
     @Override
     public void doStart() throws Exception {
-	super.doStart();
-	scheduler = Executors.newSingleThreadScheduledExecutor();
-	cleanupTask = scheduler.scheduleWithFixedDelay(this, cleanupTaskDelay,
-	        cleanupTaskDelay, TimeUnit.SECONDS);
+        super.doStart();
+        scheduler = Executors.newSingleThreadScheduledExecutor();
+        cleanupTask = scheduler.scheduleWithFixedDelay(this, cleanupTaskDelay, cleanupTaskDelay, TimeUnit.SECONDS);
     }
 
     @Override
     public void doStop() throws Exception {
-	super.doStop();
-	if (cleanupTask != null) {
-	    cleanupTask.cancel(true);
-	}
-	if (scheduler != null) {
-	    scheduler.shutdown();
-	}
+        super.doStop();
+        if (cleanupTask != null) {
+            cleanupTask.cancel(true);
+        }
+        if (scheduler != null) {
+            scheduler.shutdown();
+        }
     }
 
     @Override
     public Map<String, ClusterSession> getSessionMap() {
-	final Map<String, ClusterSession> sessions = new HashMap<String, ClusterSessionManager.ClusterSession>();
-	for (Entry<String, ClusterSessionData> d : sessionMap.entrySet()) {
-	    sessions.put(d.getKey(),
-		    new ClusterSession(d.getValue(), d.getKey()));
-	}
-	return sessions;
+        final Map<String, ClusterSession> sessions = new HashMap<String, ClusterSessionManager.ClusterSession>();
+        for (Entry<String, ClusterSessionData> d : sessionMap.entrySet()) {
+            sessions.put(d.getKey(), new ClusterSession(d.getValue(), d.getKey()));
+        }
+        return sessions;
     }
 
     @Override
     protected void addSession(AbstractSessionManager.Session session) {
-	final ClusterSession clusterSession = (ClusterSession) session;
-	final ClusterSessionData data = new ClusterSessionData();
-	data.setMaxIdleMs(clusterSession.getMaxInactiveInterval() * 1000);
-	data.setCreated(clusterSession.getCreationTime());
-	data.setKeys(new HashSet<String>());
-	sessionMap.put(clusterSession.getClusterId(), data);
+        final ClusterSession clusterSession = (ClusterSession) session;
+        final ClusterSessionData data = new ClusterSessionData();
+        data.setMaxIdleMs(clusterSession.getMaxInactiveInterval() * 1000);
+        data.setCreated(clusterSession.getCreationTime());
+        data.setKeys(new HashSet<String>());
+        sessionMap.put(clusterSession.getClusterId(), data);
     }
 
     @Override
     public AbstractSessionManager.Session getSession(String idInCluster) {
-	final ClusterSessionData data = sessionMap.get(idInCluster);
-	if (data == null) {
-	    return null;
-	}
-	return new ClusterSession(data, idInCluster);
+        final ClusterSessionData data = sessionMap.get(idInCluster);
+        if (data == null) {
+            return null;
+        }
+        return new ClusterSession(data, idInCluster);
     }
 
     @Override
     protected void invalidateSessions() {
-	if (invalidOnRedeploy) {
-	    logger.info("Removing all sessions");
-	    for (String idInCluster : sessionMap.keySet()) {
-		removeSession(idInCluster);
-	    }
-	}
+        if (invalidOnRedeploy) {
+            logger.info("Removing all sessions");
+            for (String idInCluster : sessionMap.keySet()) {
+                removeSession(idInCluster);
+            }
+        }
     }
 
     @Override
     protected Session newSession(HttpServletRequest request) {
-	return new ClusterSession(request);
+        return new ClusterSession(request);
     }
 
     @Override
     protected void removeSession(String idInCluster) {
-	logger.debug("Removing session:" + idInCluster);
-	final ClusterSessionData data = sessionMap.get(idInCluster);
-	for (String key : data.getKeys()) {
-	    attributeMap.remove(idInCluster + "#" + key);
-	}
-	sessionMap.remove(idInCluster);
+        logger.debug("Removing session:" + idInCluster);
+        final ClusterSessionData data = sessionMap.get(idInCluster);
+        for (String key : data.getKeys()) {
+            attributeMap.remove(idInCluster + "#" + key);
+        }
+        sessionMap.remove(idInCluster);
 
     }
 
     public class ClusterSession extends AbstractSessionManager.Session {
-	private static final long serialVersionUID = 3657090660140999739L;
+        private static final long serialVersionUID = 3657090660140999739L;
 
-	public ClusterSession(ClusterSessionData data, String clusterId) {
-	    super(data.getCreated(), clusterId);
-	}
+        public ClusterSession(ClusterSessionData data, String clusterId) {
+            super(data.getCreated(), clusterId);
+        }
 
-	protected ClusterSession(HttpServletRequest request) {
-	    super(request);
-	}
+        protected ClusterSession(HttpServletRequest request) {
+            super(request);
+        }
 
-	public String getClusterId() {
-	    return _clusterId;
-	}
+        public String getClusterId() {
+            return _clusterId;
+        }
 
-	@Override
-	public void setAttribute(String name, Object value) {
-	    super.setAttribute(name, value);
-	    if (value != null) {
-		final ClusterSessionData data = sessionMap.get(_clusterId);
-		data.getKeys().add(name);
-		if (stickySessionKey.equals(name)) {
-		    data.setKeepAlive((Boolean) value);
-		}
-		sessionMap.put(_clusterId, data);
-		attributeMap.put(_clusterId + "#" + name, value);
-	    }
-	}
+        @Override
+        public void setAttribute(String name, Object value) {
+            super.setAttribute(name, value);
+            if (value != null) {
+                final ClusterSessionData data = sessionMap.get(_clusterId);
+                data.getKeys().add(name);
+                if (stickySessionKey.equals(name)) {
+                    data.setKeepAlive((Boolean) value);
+                }
+                sessionMap.put(_clusterId, data);
+                attributeMap.put(_clusterId + "#" + name, value);
+            }
+        }
 
-	@Override
-	public Object getAttribute(String name) {
-	    return attributeMap.get(_clusterId + "#" + name);
-	}
+        @Override
+        public Object getAttribute(String name) {
+            return attributeMap.get(_clusterId + "#" + name);
+        }
 
-	@Override
-	public void removeAttribute(String name) {
-	    final ClusterSessionData data = sessionMap.get(_clusterId);
-	    if (data != null) {
-		if (data.getKeys().contains(name)) {
-		    data.getKeys().remove(name);
-		    if (stickySessionKey.equals(name)) {
-			data.setKeepAlive(false);
-		    }
-		    attributeMap.remove(_clusterId + "#" + name);
-		    sessionMap.put(_clusterId, data);
-		}
-	    }
+        @Override
+        public void removeAttribute(String name) {
+            final ClusterSessionData data = sessionMap.get(_clusterId);
+            if (data != null) {
+                if (data.getKeys().contains(name)) {
+                    data.getKeys().remove(name);
+                    if (stickySessionKey.equals(name)) {
+                        data.setKeepAlive(false);
+                    }
+                    attributeMap.remove(_clusterId + "#" + name);
+                    sessionMap.put(_clusterId, data);
+                }
+            }
 
-	}
+        }
 
-	@Override
-	public Enumeration<String> getAttributeNames() {
-	    final Set<String> keys = sessionMap.get(_clusterId).getKeys();
-	    if (keys == null) {
-		return Collections.enumeration(Collections.<String> emptySet());
-	    }
-	    return Collections.enumeration(keys);
-	}
+        @Override
+        public Enumeration<String> getAttributeNames() {
+            final Set<String> keys = sessionMap.get(_clusterId).getKeys();
+            if (keys == null) {
+                return Collections.enumeration(Collections.<String> emptySet());
+            }
+            return Collections.enumeration(keys);
+        }
 
-	@Override
-	public int getMaxInactiveInterval() {
-	    final ClusterSessionData data = sessionMap.get(_clusterId);
-	    if (data != null) {
-		_maxIdleMs = data.getMaxIdleMs();
-	    }
-	    return super.getMaxInactiveInterval();
-	}
+        @Override
+        public int getMaxInactiveInterval() {
+            final ClusterSessionData data = sessionMap.get(_clusterId);
+            if (data != null) {
+                _maxIdleMs = data.getMaxIdleMs();
+            }
+            return super.getMaxInactiveInterval();
+        }
 
-	@Override
-	public void setIdChanged(boolean changed) {
-	    final ClusterSessionData data = sessionMap.get(_clusterId);
-	    if (data != null) {
-		data.setIdChanged(changed);
-		sessionMap.put(_clusterId, data);
-	    }
-	    super.setIdChanged(changed);
-	}
+        @Override
+        public void setIdChanged(boolean changed) {
+            final ClusterSessionData data = sessionMap.get(_clusterId);
+            if (data != null) {
+                data.setIdChanged(changed);
+                sessionMap.put(_clusterId, data);
+            }
+            super.setIdChanged(changed);
+        }
 
-	@Override
-	public void setMaxInactiveInterval(int secs) {
-	    final ClusterSessionData data = sessionMap.get(_clusterId);
-	    if (data != null) {
-		data.setMaxIdleMs(secs * 1000);
-		sessionMap.put(_clusterId, data);
-	    }
-	    super.setMaxInactiveInterval(secs);
-	}
+        @Override
+        public void setMaxInactiveInterval(int secs) {
+            final ClusterSessionData data = sessionMap.get(_clusterId);
+            if (data != null) {
+                data.setMaxIdleMs(secs * 1000);
+                sessionMap.put(_clusterId, data);
+            }
+            super.setMaxInactiveInterval(secs);
+        }
 
-	@Override
-	protected Map<String, Object> newAttributeMap() {
-	    return new HashMap<String, Object>();
-	}
+        @Override
+        protected Map<String, Object> newAttributeMap() {
+            return new HashMap<String, Object>();
+        }
     }
 
     @Override
     public void run() {
-	cleanupSessions();
+        cleanupSessions();
     }
 
     private void cleanupSessions() {
-	if (isStopping() || isStopped())
-	    return;
+        if (isStopping() || isStopped())
+            return;
 
-	final Thread thread = Thread.currentThread();
-	final ClassLoader oldLoader = thread.getContextClassLoader();
+        final Thread thread = Thread.currentThread();
+        final ClassLoader oldLoader = thread.getContextClassLoader();
 
-	if (_loader != null) {
-	    thread.setContextClassLoader(_loader);
-	}
+        if (_loader != null) {
+            thread.setContextClassLoader(_loader);
+        }
 
-	try {
-	    long now = System.currentTimeMillis();
-	    for (Entry<String, ClusterSessionData> entry : sessionMap.entrySet()) {
-		final ClusterSessionData data = entry.getValue();
-		if (data.isKeepAlive()) {
-		    // Should we put the session into cryostasis?
-		    continue;
-		}
-		final long idleTime = data.getMaxIdleMs();
+        try {
+            long now = System.currentTimeMillis();
+            for (Entry<String, ClusterSessionData> entry : sessionMap.entrySet()) {
+                final ClusterSessionData data = entry.getValue();
+                if (data.isKeepAlive()) {
+                    // Should we put the session into cryostasis?
+                    continue;
+                }
+                final long idleTime = data.getMaxIdleMs();
 
-		if (idleTime > 0 && data.getAccessed() + idleTime < now) {
-		    logger.debug("Removing idle session: " + entry.getKey());
-		    removeSession(entry.getKey());
-		}
-	    }
-	} finally {
-	    thread.setContextClassLoader(oldLoader);
-	}
+                if (idleTime > 0 && data.getAccessed() + idleTime < now) {
+                    logger.debug("Removing idle session: " + entry.getKey());
+                    removeSession(entry.getKey());
+                }
+            }
+        } finally {
+            thread.setContextClassLoader(oldLoader);
+        }
     }
 }
