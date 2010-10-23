@@ -135,7 +135,7 @@ public class ClusterSessionManager extends AbstractSessionManager implements Ses
         private static final long serialVersionUID = 3657090660140999739L;
 
         public ClusterSession(ClusterSessionData data, String clusterId) {
-            super(data.getCreated(), clusterId);
+            super(data.getCreated(), data.getAccessed(), clusterId);
         }
 
         protected ClusterSession(HttpServletRequest request) {
