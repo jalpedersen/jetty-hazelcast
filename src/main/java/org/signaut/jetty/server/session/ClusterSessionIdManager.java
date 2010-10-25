@@ -19,7 +19,7 @@ import com.hazelcast.core.MultiMap;
 public class ClusterSessionIdManager extends AbstractSessionIdManager implements ClusterSessionMapProvider {
 
     private final MultiMap<String, String> sessionIdMap;
-    private final Logger logger = LoggerFactory.getLogger(getClass());
+    private final Logger log = LoggerFactory.getLogger(getClass());
     private final HazelcastInstance hazelcastInstance;
     private final HazelcastFactory hazelcastFactory = new HazelcastFactory();
     public static final String SESSION_ID_MAP = "signaut.sessionIdMap";
@@ -40,7 +40,7 @@ public class ClusterSessionIdManager extends AbstractSessionIdManager implements
         } else {
             setWorkerName(workerName);
         }
-        logger.info("SessionIdManager worker name: " + workerName);
+        log.info("SessionIdManager worker name: " + workerName);
         // This is probably not the place to put this
         System.setProperty("hazelcast.logging.type", "log4j");
         this.hazelcastInstance = hazelcastFactory.loadHazelcastInstance(hazelcastConfiguration, getClass());

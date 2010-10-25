@@ -33,7 +33,7 @@ import org.slf4j.LoggerFactory;
  */
 public class ClusterSessionManager extends AbstractSessionManager implements SessionManager, Runnable {
 
-    private final Logger logger = LoggerFactory.getLogger(getClass());
+    private final Logger log = LoggerFactory.getLogger(getClass());
     private boolean invalidOnRedeploy;
 
     private final ConcurrentMap<String, ClusterSessionData> sessionMap;
@@ -108,7 +108,7 @@ public class ClusterSessionManager extends AbstractSessionManager implements Ses
     @Override
     protected void invalidateSessions() {
         if (invalidOnRedeploy) {
-            logger.info("Removing all sessions");
+            log.info("Removing all sessions");
             for (String idInCluster : sessionMap.keySet()) {
                 removeSession(idInCluster);
             }
@@ -122,7 +122,7 @@ public class ClusterSessionManager extends AbstractSessionManager implements Ses
 
     @Override
     protected void removeSession(String idInCluster) {
-        logger.debug("Removing session:" + idInCluster);
+        log.debug("Removing session:" + idInCluster);
         final ClusterSessionData data = sessionMap.get(idInCluster);
         for (String key : data.getKeys()) {
             attributeMap.remove(idInCluster + "#" + key);
@@ -252,7 +252,7 @@ public class ClusterSessionManager extends AbstractSessionManager implements Ses
                 final long idleTime = data.getMaxIdleMs();
 
                 if (idleTime > 0 && data.getAccessed() + idleTime < now) {
-                    logger.debug("Removing idle session: " + entry.getKey());
+                    log.debug("Removing idle session: " + entry.getKey());
                     removeSession(entry.getKey());
                 }
             }
