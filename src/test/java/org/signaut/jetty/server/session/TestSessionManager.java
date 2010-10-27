@@ -16,12 +16,15 @@ import javax.servlet.http.HttpSession;
 
 import org.junit.Assert;
 import org.junit.Test;
+import org.signaut.common.hazelcast.HazelcastFactory;
 
 public class TestSessionManager {
 
     @Test
     public void testIdManager() throws Exception {
-        ClusterSessionIdManager idManager = new ClusterSessionIdManager("idWorker", "/test-session-cluster.xml");
+        final HazelcastFactory hazelcastFactory = new HazelcastFactory();
+        ClusterSessionIdManager idManager = new ClusterSessionIdManager("idWorker", 
+                                                                        hazelcastFactory.loadHazelcastInstance("/test-session-cluster.xml", getClass()));
         ClusterSessionManager sessionManager = new ClusterSessionManager(idManager);
 
         idManager.start();
