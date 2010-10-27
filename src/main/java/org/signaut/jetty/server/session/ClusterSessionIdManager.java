@@ -8,7 +8,6 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpSession;
 
 import org.eclipse.jetty.server.session.AbstractSessionIdManager;
-import org.signaut.common.hazelcast.HazelcastFactory;
 import org.signaut.jetty.server.session.ClusterSessionManager.ClusterSession;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -21,12 +20,11 @@ public class ClusterSessionIdManager extends AbstractSessionIdManager implements
     private final MultiMap<String, String> sessionIdMap;
     private final Logger log = LoggerFactory.getLogger(getClass());
     private final HazelcastInstance hazelcastInstance;
-    private final HazelcastFactory hazelcastFactory = new HazelcastFactory();
     public static final String SESSION_ID_MAP = "signaut.sessionIdMap";
     public static final String SESSION_MAP = "signaut.sessionMap";
     public static final String SESSION_ATTRIBUTE_MAP = "signaut.sessionAttrMap";
 
-    public ClusterSessionIdManager(String workerName, String hazelcastConfiguration) {
+    public ClusterSessionIdManager(String workerName, HazelcastInstance hazelcastInstance) {
         super();
 
         if (workerName == null) {
@@ -43,7 +41,7 @@ public class ClusterSessionIdManager extends AbstractSessionIdManager implements
         log.info("SessionIdManager worker name: " + workerName);
         // This is probably not the place to put this
         System.setProperty("hazelcast.logging.type", "log4j");
-        this.hazelcastInstance = hazelcastFactory.loadHazelcastInstance(hazelcastConfiguration, getClass());
+        this.hazelcastInstance = hazelcastInstance;
         this.sessionIdMap = hazelcastInstance.getMultiMap("signaut.sessionIdMap");
     }
 
