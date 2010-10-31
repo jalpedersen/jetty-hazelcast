@@ -38,9 +38,7 @@ public class ClusterSessionIdManager extends AbstractSessionIdManager implements
         } else {
             setWorkerName(workerName);
         }
-        log.info("SessionIdManager worker name: " + workerName);
-        // This is probably not the place to put this
-        System.setProperty("hazelcast.logging.type", "log4j");
+        log.info("SessionIdManager worker name: " + getWorkerName());
         this.hazelcastInstance = hazelcastInstance;
         this.sessionIdMap = hazelcastInstance.getMultiMap("signaut.sessionIdMap");
     }
