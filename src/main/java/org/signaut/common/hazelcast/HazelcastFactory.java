@@ -41,7 +41,7 @@ public class HazelcastFactory {
             }
         }
         // Bail out if all else fails
-        throw new IllegalStateException("Failed to load hazelcast configuration from " + file);
+        throw new IllegalStateException("Failed to load hazelcast configuration from " + filename);
     }
 
 }
