@@ -148,13 +148,13 @@ public class ClusterSessionManager extends AbstractSessionManager implements Ses
     }
 
     @Override
-    protected void removeSession(String idInCluster) {
+    protected boolean removeSession(String idInCluster) {
         log.debug("Removing session:" + idInCluster);
         final ClusterSessionData data = sessionMap.get(idInCluster);
         for (String key : data.getKeys()) {
             attributeMap.remove(idInCluster + "#" + key);
         }
-        sessionMap.remove(idInCluster);
+        return sessionMap.remove(idInCluster)!=null;
 
     }
 
@@ -246,10 +246,6 @@ public class ClusterSessionManager extends AbstractSessionManager implements Ses
             super.setMaxInactiveInterval(secs);
         }
 
-        @Override
-        protected Map<String, Object> newAttributeMap() {
-            return new HashMap<String, Object>();
-        }
     }
 
     @Override
