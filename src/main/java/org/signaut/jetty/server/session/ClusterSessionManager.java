@@ -61,7 +61,6 @@ import org.slf4j.LoggerFactory;
 public class ClusterSessionManager extends AbstractSessionManager implements SessionManager, Runnable {
 
     private final Logger log = LoggerFactory.getLogger(getClass());
-    private boolean invalidOnRedeploy;
 
     private final ConcurrentMap<String, ClusterSessionData> sessionMap;
     private final ConcurrentMap<String, Object> attributeMap;
@@ -72,18 +71,9 @@ public class ClusterSessionManager extends AbstractSessionManager implements Ses
 
     public ClusterSessionManager(ClusterSessionIdManager sessionIdManager) {
         super();
-        invalidOnRedeploy = false;
         setIdManager(sessionIdManager);
         this.sessionMap = sessionIdManager.getSessionMap();
         this.attributeMap = sessionIdManager.getAttributeMap();
-    }
-
-    public boolean isInvalidOnRedeploy() {
-        return invalidOnRedeploy;
-    }
-
-    public void setInvalidOnRedeploy(boolean invalidOnRedeploy) {
-        this.invalidOnRedeploy = invalidOnRedeploy;
     }
 
     @Override
@@ -134,11 +124,9 @@ public class ClusterSessionManager extends AbstractSessionManager implements Ses
 
     @Override
     protected void invalidateSessions() {
-        if (invalidOnRedeploy) {
-            log.info("Removing all sessions");
-            for (String idInCluster : sessionMap.keySet()) {
-                removeSession(idInCluster);
-            }
+        log.info("Removing all sessions");
+        for (String idInCluster : sessionMap.keySet()) {
+            removeSession(idInCluster);
         }
     }
 
