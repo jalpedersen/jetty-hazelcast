@@ -68,7 +68,8 @@ public class ClusterSessionManager extends AbstractSessionManager implements Ses
     private ScheduledExecutorService scheduler;
     private ScheduledFuture<?> cleanupTask;
     private String stickySessionKey = "_signaut.stickySession";
-
+    private final ClassLoader hzLoader = getClass().getClassLoader();
+    
     public ClusterSessionManager(ClusterSessionIdManager sessionIdManager) {
         super();
         setIdManager(sessionIdManager);
@@ -79,6 +80,7 @@ public class ClusterSessionManager extends AbstractSessionManager implements Ses
     @Override
     public void doStart() throws Exception {
         super.doStart();
+        
         scheduler = Executors.newSingleThreadScheduledExecutor();
         cleanupTask = scheduler.scheduleWithFixedDelay(this, cleanupTaskDelay, cleanupTaskDelay, TimeUnit.SECONDS);
     }
@@ -86,6 +88,8 @@ public class ClusterSessionManager extends AbstractSessionManager implements Ses
     @Override
     public void doStop() throws Exception {
         super.doStop();
+        this._loader = null;
+
         if (cleanupTask != null) {
             cleanupTask.cancel(true);
         }
@@ -97,7 +101,7 @@ public class ClusterSessionManager extends AbstractSessionManager implements Ses
     @Override
     public Map<String, ClusterSession> getSessionMap() {
         final Map<String, ClusterSession> sessions = new HashMap<String, ClusterSessionManager.ClusterSession>();
-        for (Entry<String, ClusterSessionData> d : sessionMap.entrySet()) {
+        for (Entry<String, ClusterSessionData> d : entrySet(sessionMap)) {
             sessions.put(d.getKey(), new ClusterSession(d.getValue(), d.getKey()));
         }
         return sessions;
@@ -110,12 +114,12 @@ public class ClusterSessionManager extends AbstractSessionManager implements Ses
         data.setMaxIdleMs(clusterSession.getMaxInactiveInterval() * 1000);
         data.setCreated(clusterSession.getCreationTime());
         data.setKeys(new HashSet<String>());
-        sessionMap.put(clusterSession.getClusterId(), data);
+        put(sessionMap,clusterSession.getClusterId(), data);
     }
 
     @Override
     public AbstractSessionManager.Session getSession(String idInCluster) {
-        final ClusterSessionData data = sessionMap.get(idInCluster);
+        final ClusterSessionData data = get(sessionMap, idInCluster);
         if (data == null) {
             return null;
         }
@@ -125,7 +129,7 @@ public class ClusterSessionManager extends AbstractSessionManager implements Ses
     @Override
     protected void invalidateSessions() {
         log.info("Removing all sessions");
-        for (String idInCluster : sessionMap.keySet()) {
+        for (String idInCluster : keySet(sessionMap)) {
             removeSession(idInCluster);
         }
     }
@@ -138,11 +142,11 @@ public class ClusterSessionManager extends AbstractSessionManager implements Ses
     @Override
     protected boolean removeSession(String idInCluster) {
         log.debug("Removing session:" + idInCluster);
-        final ClusterSessionData data = sessionMap.get(idInCluster);
+        final ClusterSessionData data = get(sessionMap, idInCluster);
         for (String key : data.getKeys()) {
             attributeMap.remove(idInCluster + "#" + key);
         }
-        return sessionMap.remove(idInCluster)!=null;
+        return remove(sessionMap, idInCluster)!=null;
 
     }
 
@@ -165,12 +169,12 @@ public class ClusterSessionManager extends AbstractSessionManager implements Ses
         public void setAttribute(String name, Object value) {
             super.setAttribute(name, value);
             if (value != null) {
-                final ClusterSessionData data = sessionMap.get(_clusterId);
+                final ClusterSessionData data = get(sessionMap,_clusterId);
                 data.getKeys().add(name);
                 if (stickySessionKey.equals(name)) {
                     data.setKeepAlive((Boolean) value);
                 }
-                sessionMap.put(_clusterId, data);
+                put(sessionMap, _clusterId, data);
                 attributeMap.put(_clusterId + "#" + name, value);
             }
         }
@@ -182,7 +186,7 @@ public class ClusterSessionManager extends AbstractSessionManager implements Ses
 
         @Override
         public void removeAttribute(String name) {
-            final ClusterSessionData data = sessionMap.get(_clusterId);
+            final ClusterSessionData data = get(sessionMap, _clusterId);
             if (data != null) {
                 if (data.getKeys().contains(name)) {
                     data.getKeys().remove(name);
@@ -190,7 +194,7 @@ public class ClusterSessionManager extends AbstractSessionManager implements Ses
                         data.setKeepAlive(false);
                     }
                     attributeMap.remove(_clusterId + "#" + name);
-                    sessionMap.put(_clusterId, data);
+                    put(sessionMap, _clusterId, data);
                 }
             }
 
@@ -198,7 +202,7 @@ public class ClusterSessionManager extends AbstractSessionManager implements Ses
 
         @Override
         public Enumeration<String> getAttributeNames() {
-            final Set<String> keys = sessionMap.get(_clusterId).getKeys();
+            final Set<String> keys = get(sessionMap, _clusterId).getKeys();
             if (keys == null) {
                 return Collections.enumeration(Collections.<String> emptySet());
             }
@@ -207,7 +211,7 @@ public class ClusterSessionManager extends AbstractSessionManager implements Ses
 
         @Override
         public int getMaxInactiveInterval() {
-            final ClusterSessionData data = sessionMap.get(_clusterId);
+            final ClusterSessionData data = get(sessionMap, _clusterId);
             if (data != null) {
                 _maxIdleMs = data.getMaxIdleMs();
             }
@@ -216,24 +220,74 @@ public class ClusterSessionManager extends AbstractSessionManager implements Ses
 
         @Override
         public void setIdChanged(boolean changed) {
-            final ClusterSessionData data = sessionMap.get(_clusterId);
+            final ClusterSessionData data = get(sessionMap, _clusterId);
             if (data != null) {
                 data.setIdChanged(changed);
-                sessionMap.put(_clusterId, data);
+                put(sessionMap,_clusterId, data);
             }
             super.setIdChanged(changed);
         }
 
         @Override
         public void setMaxInactiveInterval(int secs) {
-            final ClusterSessionData data = sessionMap.get(_clusterId);
+            final ClusterSessionData data = get(sessionMap, _clusterId);
             if (data != null) {
                 data.setMaxIdleMs(secs * 1000);
-                sessionMap.put(_clusterId, data);
+                put(sessionMap, _clusterId, data);
             }
             super.setMaxInactiveInterval(secs);
         }
 
+    }
+
+    private <K,V> Set<Map.Entry<K, V>> entrySet(Map<K,V> map) {
+        final ClassLoader cl = Thread.currentThread().getContextClassLoader();
+        try {
+            Thread.currentThread().setContextClassLoader(hzLoader);
+            return map.entrySet();
+        } finally {
+            Thread.currentThread().setContextClassLoader(cl);
+        }
+    }
+
+    private <K,V> Set<K> keySet(Map<K,V> map) {
+        final ClassLoader cl = Thread.currentThread().getContextClassLoader();
+        try {
+            Thread.currentThread().setContextClassLoader(hzLoader);
+            return map.keySet();
+        } finally {
+            Thread.currentThread().setContextClassLoader(cl);
+        }
+    }
+   
+    private <K,V> V get(Map<K,V> map, K key) {
+        final ClassLoader cl = Thread.currentThread().getContextClassLoader();
+        try {
+            Thread.currentThread().setContextClassLoader(hzLoader);
+            return map.get(key);    
+        } finally {
+            Thread.currentThread().setContextClassLoader(cl);
+        }
+    }
+
+    private <K,V> V put(Map<K,V> map, K key, V value) {
+        final ClassLoader cl = Thread.currentThread().getContextClassLoader();
+        try {
+            Thread.currentThread().setContextClassLoader(hzLoader);
+            return map.put(key, value);    
+        } finally {
+            Thread.currentThread().setContextClassLoader(cl);
+        }
+    }
+
+    private <K,V> V remove(Map<K,V> map, K key) {
+        final ClassLoader cl = Thread.currentThread().getContextClassLoader();
+        try {
+            Thread.currentThread().setContextClassLoader(hzLoader);
+            return map.remove(key);    
+        } finally {
+            Thread.currentThread().setContextClassLoader(cl);
+        }
     }
 
     @Override
@@ -248,8 +302,8 @@ public class ClusterSessionManager extends AbstractSessionManager implements Ses
         final Thread thread = Thread.currentThread();
         final ClassLoader oldLoader = thread.getContextClassLoader();
 
-        if (_loader != null) {
-            thread.setContextClassLoader(_loader);
+        if (hzLoader != null) {
+            thread.setContextClassLoader(hzLoader);
         }
 
         try {
