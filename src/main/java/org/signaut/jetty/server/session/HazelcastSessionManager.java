@@ -52,30 +52,48 @@ import org.slf4j.LoggerFactory;
  * Clusterable session manager using Hazelcast.
  * </p>
  * 
- * Requires {@link ClusterSessionIdManager} Session ID manager
+ * Requires {@link HazelcastSessionIdManager} Session ID manager
  * 
  * 
  * @author jalp
  * 
  */
-public class ClusterSessionManager extends AbstractSessionManager implements SessionManager, Runnable {
+public class HazelcastSessionManager extends AbstractSessionManager implements SessionManager, Runnable {
 
     private final Logger log = LoggerFactory.getLogger(getClass());
 
-    private final ConcurrentMap<String, ClusterSessionData> sessionMap;
+    private final ConcurrentMap<String, SessionData> sessionMap;
     private final ConcurrentMap<String, Object> attributeMap;
     private final long cleanupTaskDelay = 120;
     private ScheduledExecutorService scheduler;
     private ScheduledFuture<?> cleanupTask;
     private String stickySessionKey = "_signaut.stickySession";
     private final ClassLoader hzLoader = getClass().getClassLoader();
+    private boolean invalidatesOnRedeploy = false;
     
-    public ClusterSessionManager(ClusterSessionIdManager sessionIdManager) {
+    public HazelcastSessionManager(HazelcastSessionIdManager sessionIdManager) {
         super();
         setIdManager(sessionIdManager);
         this.sessionMap = sessionIdManager.getSessionMap();
         this.attributeMap = sessionIdManager.getAttributeMap();
     }
+
+    public String getStickySessionKey() {
+        return stickySessionKey;
+    }
+
+    public void setStickySessionKey(String stickySessionKey) {
+        this.stickySessionKey = stickySessionKey;
+    }
+
+    public boolean isInvalidatesOnRedeploy() {
+        return invalidatesOnRedeploy;
+    }
+
+    public void setInvalidatesOnRedeploy(boolean invalidatesOnRedeploy) {
+        this.invalidatesOnRedeploy = invalidatesOnRedeploy;
+    }
+
 
     @Override
     public void doStart() throws Exception {
@@ -99,18 +117,18 @@ public class ClusterSessionManager extends AbstractSessionManager implements Ses
     }
 
     @Override
-    public Map<String, ClusterSession> getSessionMap() {
-        final Map<String, ClusterSession> sessions = new HashMap<String, ClusterSessionManager.ClusterSession>();
-        for (Entry<String, ClusterSessionData> d : entrySet(sessionMap)) {
-            sessions.put(d.getKey(), new ClusterSession(d.getValue(), d.getKey()));
+    public Map<String, HazelcastSession> getSessionMap() {
+        final Map<String, HazelcastSession> sessions = new HashMap<String, HazelcastSessionManager.HazelcastSession>();
+        for (Entry<String, SessionData> d : entrySet(sessionMap)) {
+            sessions.put(d.getKey(), new HazelcastSession(d.getValue(), d.getKey()));
         }
         return sessions;
     }
 
     @Override
     protected void addSession(AbstractSessionManager.Session session) {
-        final ClusterSession clusterSession = (ClusterSession) session;
-        final ClusterSessionData data = new ClusterSessionData();
+        final HazelcastSession clusterSession = (HazelcastSession) session;
+        final SessionData data = new SessionData();
         data.setMaxIdleMs(clusterSession.getMaxInactiveInterval() * 1000);
         data.setCreated(clusterSession.getCreationTime());
         data.setKeys(new HashSet<String>());
@@ -119,30 +137,32 @@ public class ClusterSessionManager extends AbstractSessionManager implements Ses
 
     @Override
     public AbstractSessionManager.Session getSession(String idInCluster) {
-        final ClusterSessionData data = get(sessionMap, idInCluster);
+        final SessionData data = get(sessionMap, idInCluster);
         if (data == null) {
             return null;
         }
-        return new ClusterSession(data, idInCluster);
+        return new HazelcastSession(data, idInCluster);
     }
 
     @Override
     protected void invalidateSessions() {
-        log.info("Removing all sessions");
-        for (String idInCluster : keySet(sessionMap)) {
-            removeSession(idInCluster);
+        if (this.invalidatesOnRedeploy) {
+            log.info("Removing all sessions");
+            for (String idInCluster : keySet(sessionMap)) {
+                removeSession(idInCluster);
+            }
         }
     }
 
     @Override
     protected Session newSession(HttpServletRequest request) {
-        return new ClusterSession(request);
+        return new HazelcastSession(request);
     }
 
     @Override
     protected boolean removeSession(String idInCluster) {
         log.debug("Removing session:" + idInCluster);
-        final ClusterSessionData data = get(sessionMap, idInCluster);
+        final SessionData data = get(sessionMap, idInCluster);
         for (String key : data.getKeys()) {
             attributeMap.remove(idInCluster + "#" + key);
         }
@@ -150,14 +170,14 @@ public class ClusterSessionManager extends AbstractSessionManager implements Ses
 
     }
 
-    public class ClusterSession extends AbstractSessionManager.Session {
+    public class HazelcastSession extends AbstractSessionManager.Session {
         private static final long serialVersionUID = 3657090660140999739L;
 
-        public ClusterSession(ClusterSessionData data, String clusterId) {
+        public HazelcastSession(SessionData data, String clusterId) {
             super(data.getCreated(), data.getAccessed(), clusterId);
         }
 
-        protected ClusterSession(HttpServletRequest request) {
+        protected HazelcastSession(HttpServletRequest request) {
             super(request);
         }
 
@@ -169,7 +189,7 @@ public class ClusterSessionManager extends AbstractSessionManager implements Ses
         public void setAttribute(String name, Object value) {
             super.setAttribute(name, value);
             if (value != null) {
-                final ClusterSessionData data = get(sessionMap,_clusterId);
+                final SessionData data = get(sessionMap,_clusterId);
                 data.getKeys().add(name);
                 if (stickySessionKey.equals(name)) {
                     data.setKeepAlive((Boolean) value);
@@ -186,7 +206,7 @@ public class ClusterSessionManager extends AbstractSessionManager implements Ses
 
         @Override
         public void removeAttribute(String name) {
-            final ClusterSessionData data = get(sessionMap, _clusterId);
+            final SessionData data = get(sessionMap, _clusterId);
             if (data != null) {
                 if (data.getKeys().contains(name)) {
                     data.getKeys().remove(name);
@@ -211,7 +231,7 @@ public class ClusterSessionManager extends AbstractSessionManager implements Ses
 
         @Override
         public int getMaxInactiveInterval() {
-            final ClusterSessionData data = get(sessionMap, _clusterId);
+            final SessionData data = get(sessionMap, _clusterId);
             if (data != null) {
                 _maxIdleMs = data.getMaxIdleMs();
             }
@@ -220,7 +240,7 @@ public class ClusterSessionManager extends AbstractSessionManager implements Ses
 
         @Override
         public void setIdChanged(boolean changed) {
-            final ClusterSessionData data = get(sessionMap, _clusterId);
+            final SessionData data = get(sessionMap, _clusterId);
             if (data != null) {
                 data.setIdChanged(changed);
                 put(sessionMap,_clusterId, data);
@@ -230,7 +250,7 @@ public class ClusterSessionManager extends AbstractSessionManager implements Ses
 
         @Override
         public void setMaxInactiveInterval(int secs) {
-            final ClusterSessionData data = get(sessionMap, _clusterId);
+            final SessionData data = get(sessionMap, _clusterId);
             if (data != null) {
                 data.setMaxIdleMs(secs * 1000);
                 put(sessionMap, _clusterId, data);
@@ -308,8 +328,8 @@ public class ClusterSessionManager extends AbstractSessionManager implements Ses
 
         try {
             long now = System.currentTimeMillis();
-            for (Entry<String, ClusterSessionData> entry : sessionMap.entrySet()) {
-                final ClusterSessionData data = entry.getValue();
+            for (Entry<String, SessionData> entry : sessionMap.entrySet()) {
+                final SessionData data = entry.getValue();
                 if (data.isKeepAlive()) {
                     // Should we put the session into cryostasis?
                     continue;

@@ -13,9 +13,9 @@ public class TestSessionManager {
     @Test
     public void testIdManager() throws Exception {
         final HazelcastFactory hazelcastFactory = new HazelcastFactory();
-        ClusterSessionIdManager idManager = new ClusterSessionIdManager("idWorker", 
+        HazelcastSessionIdManager idManager = new HazelcastSessionIdManager("idWorker", 
                                                                         hazelcastFactory.loadHazelcastInstance("/test-session-cluster.xml", getClass()));
-        ClusterSessionManager sessionManager = new ClusterSessionManager(idManager);
+        HazelcastSessionManager sessionManager = new HazelcastSessionManager(idManager);
 
         idManager.start();
         sessionManager.start();

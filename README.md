@@ -1,4 +1,4 @@
-Jetty-cluster
+Jetty-hazelcast
 =============
 
 A hazelcast based SessionIdManager and SessionManager for Jetty 7.

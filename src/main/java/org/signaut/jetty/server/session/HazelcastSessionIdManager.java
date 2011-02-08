@@ -35,14 +35,14 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpSession;
 
 import org.eclipse.jetty.server.session.AbstractSessionIdManager;
-import org.signaut.jetty.server.session.ClusterSessionManager.ClusterSession;
+import org.signaut.jetty.server.session.HazelcastSessionManager.HazelcastSession;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.hazelcast.core.HazelcastInstance;
 import com.hazelcast.core.MultiMap;
 
-public class ClusterSessionIdManager extends AbstractSessionIdManager implements ClusterSessionMapProvider {
+public class HazelcastSessionIdManager extends AbstractSessionIdManager implements HazelcastSessionMapProvider {
 
     private final MultiMap<String, String> sessionIdMap;
     private final Logger log = LoggerFactory.getLogger(getClass());
@@ -51,7 +51,7 @@ public class ClusterSessionIdManager extends AbstractSessionIdManager implements
     public static final String SESSION_MAP = "signaut.sessionMap";
     public static final String SESSION_ATTRIBUTE_MAP = "signaut.sessionAttrMap";
 
-    public ClusterSessionIdManager(String workerName, HazelcastInstance hazelcastInstance) {
+    public HazelcastSessionIdManager(String workerName, HazelcastInstance hazelcastInstance) {
         super();
 
         if (workerName == null) {
@@ -95,11 +95,11 @@ public class ClusterSessionIdManager extends AbstractSessionIdManager implements
     }
 
     public void addSession(HttpSession session) {
-        sessionIdMap.put(getClusterId(session.getId()), ((ClusterSession) session).getClusterId());
+        sessionIdMap.put(getClusterId(session.getId()), ((HazelcastSession) session).getClusterId());
     }
 
     public void removeSession(HttpSession session) {
-        sessionIdMap.remove(getClusterId(session.getId()), ((ClusterSession) session).getClusterId());
+        sessionIdMap.remove(getClusterId(session.getId()), ((HazelcastSession) session).getClusterId());
     }
 
     public void invalidateAll(String id) {
@@ -107,7 +107,7 @@ public class ClusterSessionIdManager extends AbstractSessionIdManager implements
     }
 
     @Override
-    public ConcurrentMap<String, ClusterSessionData> getSessionMap() {
+    public ConcurrentMap<String, SessionData> getSessionMap() {
         return hazelcastInstance.getMap(SESSION_MAP);
     }
 
