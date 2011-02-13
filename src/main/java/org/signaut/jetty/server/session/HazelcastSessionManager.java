@@ -105,15 +105,13 @@ public class HazelcastSessionManager extends AbstractSessionManager implements S
 
     @Override
     public void doStop() throws Exception {
-        super.doStop();
-        this._loader = null;
-
         if (cleanupTask != null) {
             cleanupTask.cancel(true);
         }
         if (scheduler != null) {
             scheduler.shutdown();
         }
+        super.doStop();
     }
 
     @Override
