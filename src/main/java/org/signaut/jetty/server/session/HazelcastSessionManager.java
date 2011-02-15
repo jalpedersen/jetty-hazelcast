@@ -62,20 +62,20 @@ public class HazelcastSessionManager extends AbstractSessionManager implements S
 
     private final Logger log = LoggerFactory.getLogger(getClass());
 
-    private final ConcurrentMap<String, SessionData> sessionMap;
-    private final ConcurrentMap<String, Object> attributeMap;
+    private ConcurrentMap<String, SessionData> sessionMap;
+    private ConcurrentMap<String, Object> attributeMap;
     private final long cleanupTaskDelay = 120;
     private ScheduledExecutorService scheduler;
     private ScheduledFuture<?> cleanupTask;
     private String stickySessionKey = "_signaut.stickySession";
     private final ClassLoader hzLoader = getClass().getClassLoader();
     private boolean invalidatesOnRedeploy = false;
+    private final HazelcastSessionIdManager hazelcastSessionIdManager;
     
     public HazelcastSessionManager(HazelcastSessionIdManager sessionIdManager) {
         super();
+        this.hazelcastSessionIdManager = sessionIdManager;
         setIdManager(sessionIdManager);
-        this.sessionMap = sessionIdManager.getSessionMap();
-        this.attributeMap = sessionIdManager.getAttributeMap();
     }
 
     public String getStickySessionKey() {
@@ -98,19 +98,28 @@ public class HazelcastSessionManager extends AbstractSessionManager implements S
     @Override
     public void doStart() throws Exception {
         super.doStart();
+        this.sessionMap = hazelcastSessionIdManager.getSessionMap();
+        this.attributeMap = hazelcastSessionIdManager.getAttributeMap();
         
+        clearScheduler();
         scheduler = Executors.newSingleThreadScheduledExecutor();
         cleanupTask = scheduler.scheduleWithFixedDelay(this, cleanupTaskDelay, cleanupTaskDelay, TimeUnit.SECONDS);
     }
-
-    @Override
-    public void doStop() throws Exception {
+    
+    private void clearScheduler() {
         if (cleanupTask != null) {
             cleanupTask.cancel(true);
         }
         if (scheduler != null) {
             scheduler.shutdown();
         }
+    }
+
+    @Override
+    public void doStop() throws Exception {
+        clearScheduler();
+        this.sessionMap = null;
+        this.attributeMap = null;
         super.doStop();
     }
 

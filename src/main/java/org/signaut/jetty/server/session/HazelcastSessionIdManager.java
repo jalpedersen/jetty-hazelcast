@@ -44,7 +44,7 @@ import com.hazelcast.core.MultiMap;
 
 public class HazelcastSessionIdManager extends AbstractSessionIdManager implements HazelcastSessionMapProvider {
 
-    private final MultiMap<String, String> sessionIdMap;
+    private MultiMap<String, String> sessionIdMap;
     private final Logger log = LoggerFactory.getLogger(getClass());
     private final HazelcastInstance hazelcastInstance;
     public static final String SESSION_ID_MAP = "signaut.sessionIdMap";
@@ -67,7 +67,7 @@ public class HazelcastSessionIdManager extends AbstractSessionIdManager implemen
         }
         log.info("SessionIdManager worker name: " + getWorkerName());
         this.hazelcastInstance = hazelcastInstance;
-        this.sessionIdMap = hazelcastInstance.getMultiMap("signaut.sessionIdMap");
+        
     }
 
     public String getNodeId(String clusterId, HttpServletRequest request) {
@@ -81,6 +81,7 @@ public class HazelcastSessionIdManager extends AbstractSessionIdManager implemen
 
     @Override
     protected void doStart() throws Exception {
+        this.sessionIdMap = hazelcastInstance.getMultiMap("signaut.sessionIdMap");
         super.doStart();
     }
 
@@ -88,6 +89,7 @@ public class HazelcastSessionIdManager extends AbstractSessionIdManager implemen
     protected void doStop() throws Exception {
         // Do not clear map as others may be using it.
         super.doStop();
+        this.sessionIdMap = null;
     }
 
     public boolean idInUse(String id) {
