@@ -51,6 +51,10 @@ public class HazelcastSessionIdManager extends AbstractSessionIdManager implemen
     public static final String SESSION_MAP = "signaut.sessionMap";
     public static final String SESSION_ATTRIBUTE_MAP = "signaut.sessionAttrMap";
 
+    public HazelcastSessionIdManager(HazelcastInstance hazelcastInstance) {
+        this(null, hazelcastInstance);
+    }
+
     public HazelcastSessionIdManager(String workerName, HazelcastInstance hazelcastInstance) {
         super();
 
