@@ -105,7 +105,9 @@ public class HazelcastSessionIdManager extends AbstractSessionIdManager implemen
     }
 
     public void removeSession(HttpSession session) {
-        sessionIdMap.remove(getClusterId(session.getId()), ((HazelcastSession) session).getClusterId());
+        if (session != null) {
+            sessionIdMap.remove(getClusterId(session.getId()), ((HazelcastSession) session).getClusterId());
+        }
     }
 
     public void invalidateAll(String id) {

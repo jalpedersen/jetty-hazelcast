@@ -173,6 +173,7 @@ public class HazelcastSessionManager extends AbstractSessionManager implements S
         for (String key : data.getKeys()) {
             attributeMap.remove(idInCluster + "#" + key);
         }
+        hazelcastSessionIdManager.removeSession(getSession(idInCluster));
         return remove(sessionMap, idInCluster)!=null;
 
     }
