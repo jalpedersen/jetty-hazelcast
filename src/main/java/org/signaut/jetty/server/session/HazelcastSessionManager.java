@@ -44,6 +44,7 @@ import javax.servlet.http.HttpServletRequest;
 
 import org.eclipse.jetty.server.SessionManager;
 import org.eclipse.jetty.server.session.AbstractSessionManager;
+import org.eclipse.jetty.server.session.AbstractSession;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -133,7 +134,7 @@ public class HazelcastSessionManager extends AbstractSessionManager implements S
     }
 
     @Override
-    protected void addSession(AbstractSessionManager.Session session) {
+    protected void addSession(AbstractSession session) {
         final HazelcastSession clusterSession = (HazelcastSession) session;
         final SessionData data = new SessionData();
         data.setMaxIdleMs(clusterSession.getMaxInactiveInterval() * 1000);
@@ -143,7 +144,7 @@ public class HazelcastSessionManager extends AbstractSessionManager implements S
     }
 
     @Override
-    public AbstractSessionManager.Session getSession(String idInCluster) {
+    public AbstractSession getSession(String idInCluster) {
         final SessionData data = get(sessionMap, idInCluster);
         if (data == null) {
             return null;
@@ -162,7 +163,7 @@ public class HazelcastSessionManager extends AbstractSessionManager implements S
     }
 
     @Override
-    protected Session newSession(HttpServletRequest request) {
+    protected AbstractSession newSession(HttpServletRequest request) {
         return new HazelcastSession(request);
     }
 
@@ -178,51 +179,46 @@ public class HazelcastSessionManager extends AbstractSessionManager implements S
 
     }
 
-    public class HazelcastSession extends AbstractSessionManager.Session {
+    public class HazelcastSession extends AbstractSession {
         private static final long serialVersionUID = 3657090660140999739L;
 
         public HazelcastSession(SessionData data, String clusterId) {
-            super(data.getCreated(), data.getAccessed(), clusterId);
+            super(HazelcastSessionManager.this, data.getCreated(), data.getAccessed(), clusterId);
         }
 
         protected HazelcastSession(HttpServletRequest request) {
-            super(request);
+            super(HazelcastSessionManager.this, request);
         }
 
-        public String getClusterId() {
-            return _clusterId;
-        }
-
-        @Override
         public void setAttribute(String name, Object value) {
             super.setAttribute(name, value);
             if (value != null) {
-                final SessionData data = get(sessionMap,_clusterId);
+                final SessionData data = get(sessionMap, getClusterId());
                 data.getKeys().add(name);
                 if (stickySessionKey.equals(name)) {
                     data.setKeepAlive((Boolean) value);
                 }
-                put(sessionMap, _clusterId, data);
-                attributeMap.put(_clusterId + "#" + name, value);
+                put(sessionMap, getClusterId(), data);
+                attributeMap.put(getClusterId() + "#" + name, value);
             }
         }
 
         @Override
         public Object getAttribute(String name) {
-            return attributeMap.get(_clusterId + "#" + name);
+            return attributeMap.get(getClusterId() + "#" + name);
         }
 
         @Override
         public void removeAttribute(String name) {
-            final SessionData data = get(sessionMap, _clusterId);
+            final SessionData data = get(sessionMap, getClusterId());
             if (data != null) {
                 if (data.getKeys().contains(name)) {
                     data.getKeys().remove(name);
                     if (stickySessionKey.equals(name)) {
                         data.setKeepAlive(false);
                     }
-                    attributeMap.remove(_clusterId + "#" + name);
-                    put(sessionMap, _clusterId, data);
+                    attributeMap.remove(getClusterId() + "#" + name);
+                    put(sessionMap, getClusterId(), data);
                 }
             }
 
@@ -230,7 +226,7 @@ public class HazelcastSessionManager extends AbstractSessionManager implements S
 
         @Override
         public Enumeration<String> getAttributeNames() {
-            final Set<String> keys = get(sessionMap, _clusterId).getKeys();
+            final Set<String> keys = get(sessionMap, getClusterId()).getKeys();
             if (keys == null) {
                 return Collections.enumeration(Collections.<String> emptySet());
             }
@@ -239,29 +235,29 @@ public class HazelcastSessionManager extends AbstractSessionManager implements S
 
         @Override
         public int getMaxInactiveInterval() {
-            final SessionData data = get(sessionMap, _clusterId);
+            final SessionData data = get(sessionMap, getClusterId());
             if (data != null) {
-                _maxIdleMs = data.getMaxIdleMs();
+                setMaxInactiveInterval((int)data.getMaxIdleMs()/1000);
             }
             return super.getMaxInactiveInterval();
         }
 
         @Override
         public void setIdChanged(boolean changed) {
-            final SessionData data = get(sessionMap, _clusterId);
+            final SessionData data = get(sessionMap, getClusterId());
             if (data != null) {
                 data.setIdChanged(changed);
-                put(sessionMap,_clusterId, data);
+                put(sessionMap,getClusterId(), data);
             }
             super.setIdChanged(changed);
         }
 
         @Override
         public void setMaxInactiveInterval(int secs) {
-            final SessionData data = get(sessionMap, _clusterId);
+            final SessionData data = get(sessionMap, getClusterId());
             if (data != null) {
                 data.setMaxIdleMs(secs * 1000);
-                put(sessionMap, _clusterId, data);
+                put(sessionMap, getClusterId(), data);
             }
             super.setMaxInactiveInterval(secs);
         }
