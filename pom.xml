@@ -3,16 +3,16 @@
   <modelVersion>4.0.0</modelVersion>
   <groupId>org.signaut</groupId>
   <artifactId>jetty-hazelcast</artifactId>
-  <version>1.1.4</version>
+  <version>1.1.5</version>
   <name>jetty sessionmanager using hazelcast</name>
   <properties>
-    <jetty.version>7.5.4.v20111024</jetty.version>
+    <jetty.version>7.6.0.RC3</jetty.version>
   </properties>
   <dependencies>
     <dependency>
       <groupId>org.slf4j</groupId>
       <artifactId>slf4j-api</artifactId>
-      <version>1.6.1</version>
+      <version>1.6.4</version>
     </dependency>
     <dependency>
       <groupId>org.eclipse.jetty</groupId>
@@ -29,19 +29,19 @@
     <dependency>
       <groupId>com.hazelcast</groupId>
       <artifactId>hazelcast</artifactId>
-      <version>1.9.4.3</version>
+      <version>1.9.4.4</version>
     </dependency>
     <!-- Test dependencies -->
     <dependency>
       <groupId>junit</groupId>
       <artifactId>junit</artifactId>
-      <version>4.8.2</version>
+      <version>4.10</version>
       <scope>test</scope>
     </dependency>
     <dependency>
       <groupId>org.mockito</groupId>
       <artifactId>mockito-all</artifactId>
-      <version>1.8.5</version>
+      <version>1.9.0</version>
       <scope>test</scope>
     </dependency>
   </dependencies>
