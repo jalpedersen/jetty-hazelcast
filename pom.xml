@@ -3,10 +3,10 @@
   <modelVersion>4.0.0</modelVersion>
   <groupId>org.signaut</groupId>
   <artifactId>jetty-hazelcast</artifactId>
-  <version>1.2.0</version>
-  <name>jetty sessionmanager using hazelcast</name>
+  <version>1.2.1</version>
+  <name>Hazelcast Jetty Session Manager</name>
   <properties>
-    <jetty.version>7.6.0.v20120127</jetty.version>
+    <jetty.version>7.6.1.v20120215</jetty.version>
   </properties>
   <dependencies>
     <dependency>
@@ -29,7 +29,7 @@
     <dependency>
       <groupId>com.hazelcast</groupId>
       <artifactId>hazelcast</artifactId>
-      <version>1.9.4.6</version>
+      <version>1.9.4.8</version>
     </dependency>
     <!-- Test dependencies -->
     <dependency>
