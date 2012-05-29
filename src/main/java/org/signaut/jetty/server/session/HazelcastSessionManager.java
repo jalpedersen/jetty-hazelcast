@@ -76,7 +76,7 @@ public class HazelcastSessionManager extends AbstractSessionManager implements S
     public HazelcastSessionManager(HazelcastSessionIdManager sessionIdManager) {
         super();
         this.hazelcastSessionIdManager = sessionIdManager;
-        setIdManager(sessionIdManager);
+        setSessionIdManager(sessionIdManager);
     }
 
     public String getStickySessionKey() {
@@ -180,7 +180,6 @@ public class HazelcastSessionManager extends AbstractSessionManager implements S
     }
 
     public class HazelcastSession extends AbstractSession {
-        private static final long serialVersionUID = 3657090660140999739L;
 
         public HazelcastSession(SessionData data, String clusterId) {
             super(HazelcastSessionManager.this, data.getCreated(), data.getAccessed(), clusterId);
