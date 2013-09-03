@@ -56,12 +56,12 @@
         <max-pool-size>64</max-pool-size>
         <keep-alive-seconds>60</keep-alive-seconds>
     </executor-service>
-    <multimap name="signaut.sessionIdMap">
+    <set name="signaut.sessionIdSet">
         <backup-count>1</backup-count>
         <eviction-policy>NONE</eviction-policy>
         <max-size>0</max-size>
         <merge-policy>hz.ADD_NEW_ENTRY</merge-policy>
-    </multimap>
+    </set>
     <map name="signaut.sessionMap">
         <backup-count>1</backup-count>
         <eviction-policy>NONE</eviction-policy>

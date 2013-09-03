@@ -29,35 +29,43 @@ package org.signaut.jetty.server.session;
 
 import java.net.InetAddress;
 import java.net.UnknownHostException;
+import java.util.Set;
 import java.util.concurrent.ConcurrentMap;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpSession;
 
+import org.eclipse.jetty.server.Handler;
+import org.eclipse.jetty.server.Server;
+import org.eclipse.jetty.server.SessionManager;
+import org.eclipse.jetty.server.handler.ContextHandler;
+import org.eclipse.jetty.server.session.AbstractSession;
 import org.eclipse.jetty.server.session.AbstractSessionIdManager;
+import org.eclipse.jetty.server.session.JDBCSessionManager;
+import org.eclipse.jetty.server.session.SessionHandler;
 import org.signaut.jetty.server.session.HazelcastSessionManager.HazelcastSession;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.hazelcast.core.HazelcastInstance;
-import com.hazelcast.core.MultiMap;
 
 public class HazelcastSessionIdManager extends AbstractSessionIdManager implements HazelcastSessionMapProvider {
 
-    private MultiMap<String, String> sessionIdMap;
+    private Set<String> sessions;
+    private final Server server;
     private final Logger log = LoggerFactory.getLogger(getClass());
     private final HazelcastInstance hazelcastInstance;
-    public static final String SESSION_ID_MAP = "signaut.sessionIdMap";
+    public static final String SESSION_ID_SET = "signaut.sessionIdSet";
     public static final String SESSION_MAP = "signaut.sessionMap";
     public static final String SESSION_ATTRIBUTE_MAP = "signaut.sessionAttrMap";
 
-    public HazelcastSessionIdManager(HazelcastInstance hazelcastInstance) {
-        this(null, hazelcastInstance);
+    public HazelcastSessionIdManager(Server server, HazelcastInstance hazelcastInstance) {
+        this(server ,null, hazelcastInstance);
     }
 
-    public HazelcastSessionIdManager(String workerName, HazelcastInstance hazelcastInstance) {
+    public HazelcastSessionIdManager(Server server, String workerName, HazelcastInstance hazelcastInstance) {
         super();
-
+        this.server = server;
         if (workerName == null) {
             final String hostname;
             try {
@@ -74,6 +82,10 @@ public class HazelcastSessionIdManager extends AbstractSessionIdManager implemen
         
     }
 
+    public void setWorkerName(String name) {
+    	super.setWorkerName(name.replace(".", "-"));
+    }
+    
     public String getNodeId(String clusterId, HttpServletRequest request) {
         return clusterId + '.' + getWorkerName();
     }
@@ -85,7 +97,7 @@ public class HazelcastSessionIdManager extends AbstractSessionIdManager implemen
 
     @Override
     protected void doStart() throws Exception {
-        this.sessionIdMap = hazelcastInstance.getMultiMap("signaut.sessionIdMap");
+        this.sessions = hazelcastInstance.getSet(SESSION_ID_SET);
         super.doStart();
     }
 
@@ -93,26 +105,57 @@ public class HazelcastSessionIdManager extends AbstractSessionIdManager implemen
     protected void doStop() throws Exception {
         // Do not clear map as others may be using it.
         super.doStop();
-        this.sessionIdMap = null;
+        this.sessions = null;
     }
 
     public boolean idInUse(String id) {
-        return sessionIdMap.containsKey(id);
+        return sessions.contains(id);
     }
 
     public void addSession(HttpSession session) {
-        sessionIdMap.put(getClusterId(session.getId()), ((HazelcastSession) session).getClusterId());
+        sessions.add(((HazelcastSession) session).getClusterId());
     }
 
     public void removeSession(HttpSession session) {
         if (session != null) {
-            sessionIdMap.remove(getClusterId(session.getId()), ((HazelcastSession) session).getClusterId());
+            removeSession(((HazelcastSession) session).getClusterId());
         }
     }
 
-    public void invalidateAll(String id) {
-        // Not implemented
+    
+    private void addSession(String clusterId) {
+    	if (clusterId != null) {
+    		synchronized (sessions) {
+    			sessions.add(clusterId);
+    		}
+    	}
     }
+    private void removeSession(String clusterId) {
+    	if (clusterId != null) {
+    		synchronized (sessions) {
+    			sessions.remove(clusterId);
+    		}
+    	}
+    }
+    public void invalidateAll(String id) {
+    	log.debug("Invalidating " + id);
+		removeSession(id);
+		synchronized (sessions) {
+			for (Handler handler : server.getChildHandlersByClass(ContextHandler.class)) {
+				final SessionHandler sessionHandler = ((ContextHandler) handler).getChildHandlerByClass(SessionHandler.class);
+				if (sessionHandler != null) {
+					final SessionManager manager = sessionHandler.getSessionManager();
+					if (manager != null
+							&& manager instanceof JDBCSessionManager) {
+						final AbstractSession session = ((HazelcastSessionManager) manager).getSession(id);
+						if (session != null) {
+							session.invalidate();
+						}
+					}
+				}
+			}
+		}
+	}
 
     @Override
     public ConcurrentMap<String, SessionData> getSessionMap() {
@@ -123,5 +166,26 @@ public class HazelcastSessionIdManager extends AbstractSessionIdManager implemen
     public ConcurrentMap<String, Object> getAttributeMap() {
         return hazelcastInstance.getMap(SESSION_ATTRIBUTE_MAP);
     }
+
+	@Override
+	public void renewSessionId(String oldClusterId, String oldNodeId, HttpServletRequest request) {
+        final String newClusterId = newSessionId(request.hashCode());
+
+        synchronized (sessions) {
+            removeSession(oldClusterId);
+            addSession(newClusterId); 
+
+            for (Handler handler: server.getChildHandlersByClass(ContextHandler.class)) {
+                final SessionHandler sessionHandler = ((ContextHandler)handler).getChildHandlerByClass(SessionHandler.class);
+                if (sessionHandler != null)  {
+                	final SessionManager manager = sessionHandler.getSessionManager();
+
+                    if (manager != null && manager instanceof HazelcastSessionManager) {
+                        ((HazelcastSessionManager)manager).renewSessionId(oldClusterId, oldNodeId, newClusterId, getNodeId(newClusterId, request));
+                    }
+                }
+            }
+        }		
+	}
 
 }

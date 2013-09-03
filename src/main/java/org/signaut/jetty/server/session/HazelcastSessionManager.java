@@ -43,8 +43,8 @@ import java.util.concurrent.TimeUnit;
 import javax.servlet.http.HttpServletRequest;
 
 import org.eclipse.jetty.server.SessionManager;
-import org.eclipse.jetty.server.session.AbstractSessionManager;
 import org.eclipse.jetty.server.session.AbstractSession;
+import org.eclipse.jetty.server.session.AbstractSessionManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -346,6 +346,25 @@ public class HazelcastSessionManager extends AbstractSessionManager implements S
             }
         } finally {
             thread.setContextClassLoader(oldLoader);
+        }
+    }
+    
+    @Override
+    public void renewSessionId(String oldClusterId, String oldNodeId, String newClusterId, String newNodeId)
+    {
+        try
+        {
+            if (sessionMap == null)
+                return;
+
+            SessionData session = sessionMap.remove(oldClusterId);
+            if (session == null)
+                return;
+            sessionMap.put(newClusterId, session);
+        }
+        catch (Exception e)
+        {
+            log.error("Error renewing session", e);
         }
     }
 }

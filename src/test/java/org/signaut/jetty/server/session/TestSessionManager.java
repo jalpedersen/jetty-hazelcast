@@ -3,6 +3,7 @@ package org.signaut.jetty.server.session;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpSession;
 
+import org.eclipse.jetty.server.Server;
 import org.junit.Assert;
 import org.junit.Test;
 import org.signaut.common.hazelcast.HazelcastFactory;
@@ -13,7 +14,8 @@ public class TestSessionManager {
     @Test
     public void testIdManager() throws Exception {
         final HazelcastFactory hazelcastFactory = new HazelcastFactory();
-        HazelcastSessionIdManager idManager = new HazelcastSessionIdManager("idWorker", 
+        final Server server = new Server();
+        HazelcastSessionIdManager idManager = new HazelcastSessionIdManager(server, "idWorker", 
                                                                         hazelcastFactory.loadHazelcastInstance("/test-session-cluster.xml", getClass()));
         HazelcastSessionManager sessionManager = new HazelcastSessionManager(idManager);
 
