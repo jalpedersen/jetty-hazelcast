@@ -153,7 +153,7 @@ public class HazelcastSessionManager extends AbstractSessionManager implements S
     }
 
     @Override
-    protected void invalidateSessions() {
+    protected void shutdownSessions() {
         if (this.invalidatesOnRedeploy) {
             log.info("Removing all sessions");
             for (String idInCluster : keySet(sessionMap)) {

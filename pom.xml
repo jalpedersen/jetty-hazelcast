@@ -3,16 +3,18 @@
   <modelVersion>4.0.0</modelVersion>
   <groupId>org.signaut</groupId>
   <artifactId>jetty-hazelcast</artifactId>
-  <version>1.5.0</version>
+  <version>1.6.0</version>
   <name>Hazelcast Jetty Session Manager</name>
   <properties>
-    <jetty.version>9.0.5.v20130815</jetty.version>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <jetty.version>9.1.2.v20140210</jetty.version>
+    <hazelcast.version>3.1.5</hazelcast.version>
   </properties>
   <dependencies>
     <dependency>
       <groupId>org.slf4j</groupId>
       <artifactId>slf4j-api</artifactId>
-      <version>1.7.5</version>
+      <version>1.7.6</version>
     </dependency>
     <dependency>
       <groupId>org.eclipse.jetty</groupId>
@@ -29,7 +31,7 @@
     <dependency>
       <groupId>com.hazelcast</groupId>
       <artifactId>hazelcast</artifactId>
-      <version>3.0</version>
+      <version>${hazelcast.version}</version>
     </dependency>
     <!-- Test dependencies -->
     <dependency>
@@ -50,10 +52,10 @@
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-compiler-plugin</artifactId>
-        <version>2.0.2</version>
+        <version>3.0</version>
         <configuration>
-          <source>1.6</source>
-          <target>1.6</target>
+          <source>1.7</source>
+          <target>1.7</target>
         </configuration>
       </plugin>
     </plugins>
