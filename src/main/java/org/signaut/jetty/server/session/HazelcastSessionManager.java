@@ -1,30 +1,30 @@
 /*
-Copyright (c) 2010, Jesper André Lyngesen Pedersen
-All rights reserved.
+ Copyright (c) 2010, Jesper André Lyngesen Pedersen
+ All rights reserved.
 
-Redistribution and use in source and binary forms, with or without
-modification, are permitted provided that the following conditions are
-met:
+ Redistribution and use in source and binary forms, with or without
+ modification, are permitted provided that the following conditions are
+ met:
 
  - Redistributions of source code must retain the above copyright
-   notice, this list of conditions and the following disclaimer.
+ notice, this list of conditions and the following disclaimer.
 
  - Redistributions in binary form must reproduce the above copyright
-   notice, this list of conditions and the following disclaimer in the
-   documentation and/or other materials provided with the distribution.
+ notice, this list of conditions and the following disclaimer in the
+ documentation and/or other materials provided with the distribution.
 
-THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
-"AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
-LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
-A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
-HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
-SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
-LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
-DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
-THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
-(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
-OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-*/
+ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+ "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+ LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+ A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+ HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+ SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+ LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+ DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+ THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+ (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ */
 package org.signaut.jetty.server.session;
 
 import java.util.Collections;
@@ -45,23 +45,23 @@ import javax.servlet.http.HttpServletRequest;
 import org.eclipse.jetty.server.SessionManager;
 import org.eclipse.jetty.server.session.AbstractSession;
 import org.eclipse.jetty.server.session.AbstractSessionManager;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.eclipse.jetty.util.log.Log;
+import org.eclipse.jetty.util.log.Logger;
 
 /**
  * <p>
  * Clusterable session manager using Hazelcast.
  * </p>
- * 
+ *
  * Requires {@link HazelcastSessionIdManager} Session ID manager
- * 
- * 
+ *
+ *
  * @author jalp
- * 
+ *
  */
 public class HazelcastSessionManager extends AbstractSessionManager implements SessionManager, Runnable {
 
-    private final Logger log = LoggerFactory.getLogger(getClass());
+    private final Logger log = Log.getLogger(getClass());
 
     private ConcurrentMap<String, SessionData> sessionMap;
     private ConcurrentMap<String, Object> attributeMap;
@@ -72,7 +72,7 @@ public class HazelcastSessionManager extends AbstractSessionManager implements S
     private final ClassLoader hzLoader = getClass().getClassLoader();
     private boolean invalidatesOnRedeploy = false;
     private final HazelcastSessionIdManager hazelcastSessionIdManager;
-    
+
     public HazelcastSessionManager(HazelcastSessionIdManager sessionIdManager) {
         super();
         this.hazelcastSessionIdManager = sessionIdManager;
@@ -95,18 +95,18 @@ public class HazelcastSessionManager extends AbstractSessionManager implements S
         this.invalidatesOnRedeploy = invalidatesOnRedeploy;
     }
 
-
     @Override
     public void doStart() throws Exception {
         super.doStart();
         this.sessionMap = hazelcastSessionIdManager.getSessionMap();
         this.attributeMap = hazelcastSessionIdManager.getAttributeMap();
-        
+
         clearScheduler();
         scheduler = Executors.newSingleThreadScheduledExecutor();
-        cleanupTask = scheduler.scheduleWithFixedDelay(this, cleanupTaskDelay, cleanupTaskDelay, TimeUnit.SECONDS);
+        cleanupTask = scheduler.scheduleWithFixedDelay(this, cleanupTaskDelay,
+                cleanupTaskDelay, TimeUnit.SECONDS);
     }
-    
+
     private void clearScheduler() {
         if (cleanupTask != null) {
             cleanupTask.cancel(true);
@@ -126,7 +126,8 @@ public class HazelcastSessionManager extends AbstractSessionManager implements S
 
     @Override
     public Map<String, HazelcastSession> getSessionMap() {
-        final Map<String, HazelcastSession> sessions = new HashMap<String, HazelcastSessionManager.HazelcastSession>();
+        final Map<String, HazelcastSession> sessions = 
+                new HashMap<String, HazelcastSessionManager.HazelcastSession>();
         for (Entry<String, SessionData> d : entrySet(sessionMap)) {
             sessions.put(d.getKey(), new HazelcastSession(d.getValue(), d.getKey()));
         }
@@ -140,7 +141,7 @@ public class HazelcastSessionManager extends AbstractSessionManager implements S
         data.setMaxIdleMs(clusterSession.getMaxInactiveInterval() * 1000);
         data.setCreated(clusterSession.getCreationTime());
         data.setKeys(new HashSet<String>());
-        put(sessionMap,clusterSession.getClusterId(), data);
+        put(sessionMap, clusterSession.getClusterId(), data);
     }
 
     @Override
@@ -175,7 +176,7 @@ public class HazelcastSessionManager extends AbstractSessionManager implements S
             attributeMap.remove(idInCluster + "#" + key);
         }
         hazelcastSessionIdManager.removeSession(getSession(idInCluster));
-        return remove(sessionMap, idInCluster)!=null;
+        return remove(sessionMap, idInCluster) != null;
 
     }
 
@@ -227,7 +228,7 @@ public class HazelcastSessionManager extends AbstractSessionManager implements S
         public Enumeration<String> getAttributeNames() {
             final Set<String> keys = get(sessionMap, getClusterId()).getKeys();
             if (keys == null) {
-                return Collections.enumeration(Collections.<String> emptySet());
+                return Collections.enumeration(Collections.<String>emptySet());
             }
             return Collections.enumeration(keys);
         }
@@ -236,7 +237,7 @@ public class HazelcastSessionManager extends AbstractSessionManager implements S
         public int getMaxInactiveInterval() {
             final SessionData data = get(sessionMap, getClusterId());
             if (data != null) {
-                setMaxInactiveInterval((int)data.getMaxIdleMs()/1000);
+                setMaxInactiveInterval((int) data.getMaxIdleMs() / 1000);
             }
             return super.getMaxInactiveInterval();
         }
@@ -246,7 +247,7 @@ public class HazelcastSessionManager extends AbstractSessionManager implements S
             final SessionData data = get(sessionMap, getClusterId());
             if (data != null) {
                 data.setIdChanged(changed);
-                put(sessionMap,getClusterId(), data);
+                put(sessionMap, getClusterId(), data);
             }
             super.setIdChanged(changed);
         }
@@ -263,7 +264,7 @@ public class HazelcastSessionManager extends AbstractSessionManager implements S
 
     }
 
-    private <K,V> Set<Map.Entry<K, V>> entrySet(Map<K,V> map) {
+    private <K, V> Set<Map.Entry<K, V>> entrySet(Map<K, V> map) {
         final ClassLoader cl = Thread.currentThread().getContextClassLoader();
         try {
             Thread.currentThread().setContextClassLoader(hzLoader);
@@ -273,7 +274,7 @@ public class HazelcastSessionManager extends AbstractSessionManager implements S
         }
     }
 
-    private <K,V> Set<K> keySet(Map<K,V> map) {
+    private <K, V> Set<K> keySet(Map<K, V> map) {
         final ClassLoader cl = Thread.currentThread().getContextClassLoader();
         try {
             Thread.currentThread().setContextClassLoader(hzLoader);
@@ -282,32 +283,32 @@ public class HazelcastSessionManager extends AbstractSessionManager implements S
             Thread.currentThread().setContextClassLoader(cl);
         }
     }
-   
-    private <K,V> V get(Map<K,V> map, K key) {
+
+    private <K, V> V get(Map<K, V> map, K key) {
         final ClassLoader cl = Thread.currentThread().getContextClassLoader();
         try {
             Thread.currentThread().setContextClassLoader(hzLoader);
-            return map.get(key);    
+            return map.get(key);
         } finally {
             Thread.currentThread().setContextClassLoader(cl);
         }
     }
 
-    private <K,V> V put(Map<K,V> map, K key, V value) {
+    private <K, V> V put(Map<K, V> map, K key, V value) {
         final ClassLoader cl = Thread.currentThread().getContextClassLoader();
         try {
             Thread.currentThread().setContextClassLoader(hzLoader);
-            return map.put(key, value);    
+            return map.put(key, value);
         } finally {
             Thread.currentThread().setContextClassLoader(cl);
         }
     }
 
-    private <K,V> V remove(Map<K,V> map, K key) {
+    private <K, V> V remove(Map<K, V> map, K key) {
         final ClassLoader cl = Thread.currentThread().getContextClassLoader();
         try {
             Thread.currentThread().setContextClassLoader(hzLoader);
-            return map.remove(key);    
+            return map.remove(key);
         } finally {
             Thread.currentThread().setContextClassLoader(cl);
         }
@@ -319,8 +320,9 @@ public class HazelcastSessionManager extends AbstractSessionManager implements S
     }
 
     private void cleanupSessions() {
-        if (isStopping() || isStopped())
+        if (isStopping() || isStopped()) {
             return;
+        }
 
         final Thread thread = Thread.currentThread();
         final ClassLoader oldLoader = thread.getContextClassLoader();
@@ -348,23 +350,21 @@ public class HazelcastSessionManager extends AbstractSessionManager implements S
             thread.setContextClassLoader(oldLoader);
         }
     }
-    
+
     @Override
-    public void renewSessionId(String oldClusterId, String oldNodeId, String newClusterId, String newNodeId)
-    {
-        try
-        {
-            if (sessionMap == null)
+    public void renewSessionId(String oldClusterId, String oldNodeId, String newClusterId, String newNodeId) {
+        try {
+            if (sessionMap == null) {
                 return;
+            }
 
             SessionData session = sessionMap.remove(oldClusterId);
-            if (session == null)
+            if (session == null) {
                 return;
+            }
             sessionMap.put(newClusterId, session);
-        }
-        catch (Exception e)
-        {
-            log.error("Error renewing session", e);
+        } catch (Exception e) {
+            log.warn("Error renewing session", e);
         }
     }
 }
