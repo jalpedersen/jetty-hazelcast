@@ -1,0 +1,23 @@
+<?xml version="1.0"?>
+<!DOCTYPE Configure PUBLIC "-//Jetty//Configure//EN" "http://www.eclipse.org/jetty/configure_9_0.dtd">
+<Configure class="org.eclipse.jetty.webapp.WebAppContext">
+
+    <Set name="contextPath">/hz-alt</Set>
+    <Set name="war"><Property name="jetty.webapps"/>/hazelcast-example.war</Set>
+
+    <Get name="server">
+        <Get id="hzSessionIdManager" name="sessionIdManager"/>
+    </Get>
+    
+    <Set name="sessionHandler">
+        <New class="org.eclipse.jetty.server.session.SessionHandler">
+            <Arg>
+                <New class="org.signaut.jetty.server.session.HazelcastSessionManager">
+                    <Arg>
+                        <Ref id="hzSessionIdManager"/>
+                    </Arg>
+                </New>
+            </Arg>
+        </New>
+    </Set>
+</Configure>
