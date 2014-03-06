@@ -1,0 +1,14 @@
+<?xml version="1.0"?>
+<!DOCTYPE Configure PUBLIC "-//Jetty//Configure//EN" "http://www.eclipse.org/jetty/configure_9_0.dtd">
+<Configure id="Server" class="org.eclipse.jetty.server.Server">
+    <!-- Hazelcast Instance -->
+    <Call id="hzInstance" class="org.signaut.common.hazelcast.HazelcastFactory" name="loadHazelcastInstance">
+        <Arg>etc/hazelcast-example.xml</Arg>
+    </Call>
+    <Set name="sessionIdManager">
+        <New id="hzSessionIdManager" class="org.signaut.jetty.server.session.HazelcastSessionIdManager">
+            <Arg><Ref id="Server"/></Arg>
+            <Arg><Ref id="hzInstance"/></Arg>
+        </New>
+    </Set>
+</Configure>
